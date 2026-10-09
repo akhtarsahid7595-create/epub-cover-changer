@@ -2,5 +2,5 @@
   "name": "epub-cover-changer",
   "type": "module",
   "scripts": { "dev": "astro dev", "build": "astro build", "preview": "astro preview" },
-  "dependencies": { "@astrojs/node": "^9.4.0", "astro": "^5.14.1", "jszip": "^3.10.1" }
+  "dependencies": { "astro": "^5.14.1", "jszip": "^3.10.1" }
 }
