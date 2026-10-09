@@ -1,64 +1,11 @@
 ---
 import '../styles/global.css';
 ---
-
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="description" content="Replace your EPUB cover privately, right in your browser." />
-    <title>Coverly — EPUB cover changer</title>
-  </head>
-  <body>
-    <header class="nav shell">
-      <a class="brand" href="/" aria-label="Coverly home"><span class="brand-mark">✦</span> coverly</a>
-      <div class="nav-note"><span class="lock">⌑</span> Private by design</div>
-    </header>
-
-    <main>
-      <section class="hero shell">
-        <div class="eyebrow"><span></span> EPUB utility</div>
-        <h1>Give your books<br /><em>a better cover.</em></h1>
-        <p class="lede">Replace the cover of any EPUB in seconds. No uploads, no accounts, no fuss — everything happens right here in your browser.</p>
-        <div class="trust-row"><span>✓ 100% private</span><span>✓ Works offline</span><span>✓ Free to use</span></div>
-      </section>
-
-      <section class="workspace shell" aria-label="EPUB cover editor">
-        <div class="stepper"><div class="step active"><b>01</b><span>Choose book</span></div><div class="line"></div><div class="step"><b>02</b><span>Pick a cover</span></div><div class="line"></div><div class="step"><b>03</b><span>Download</span></div></div>
-        <div class="editor-card">
-          <div class="drop-zone" id="bookDrop">
-            <div class="book-icon">▱</div>
-            <h2 id="bookTitle">Drop your EPUB here</h2>
-            <p id="bookHint">or browse files from your device</p>
-            <label class="button primary" for="epubInput">Choose EPUB</label>
-            <input id="epubInput" type="file" accept=".epub,application/epub+zip" hidden />
-            <div class="file-pill" id="bookPill" hidden><span>▤</span><strong id="bookName"></strong><button id="clearBook" aria-label="Remove EPUB">×</button></div>
-          </div>
-          <div class="divider"><span>then add a new cover</span></div>
-          <div class="cover-row">
-            <div class="preview" id="preview"><div class="preview-placeholder">Your cover<br />will appear here</div></div>
-            <div class="cover-action"><h3>Choose a cover image</h3><p>JPG or PNG · up to 10 MB</p><label class="button secondary" for="coverInput">Browse image</label><input id="coverInput" type="file" accept="image/jpeg,image/png" hidden /><span class="filename" id="coverName"></span></div>
-          </div>
-          <button class="button download" id="downloadBtn" disabled><span>↓</span> Replace cover &amp; download</button>
-          <p class="status" id="status" role="status"></p>
-        </div>
-      </section>
-      <section class="safe shell"><div class="safe-icon">⌑</div><div><h3>Your files stay yours.</h3><p>Coverly processes everything locally in your browser. Your book and image never leave your device.</p></div></section>
-    </main>
-    <footer class="shell"><span>© 2026 Coverly</span><span>Made for readers who care about the details.</span></footer>
-
-    <script>
-      import JSZip from 'jszip';
-      const $ = (id) => document.getElementById(id);
-      let epubFile, coverFile;
-      const bookInput = $('epubInput'), coverInput = $('coverInput');
-      function setBook(file) { if (!file) return; epubFile = file; $('bookTitle').textContent = 'Your EPUB is ready'; $('bookHint').textContent = 'Choose a new cover below'; $('bookName').textContent = file.name; $('bookPill').hidden = false; $('bookDrop').classList.add('has-file'); update(); }
-      function setCover(file) { if (!file) return; coverFile = file; $('coverName').textContent = file.name; const url = URL.createObjectURL(file); $('preview').style.backgroundImage = `url(${url})`; $('preview').classList.add('has-image'); $('preview').innerHTML = ''; update(); }
-      function update() { $('downloadBtn').disabled = !(epubFile && coverFile); }
-      bookInput.addEventListener('change', e => setBook(e.target.files[0])); coverInput.addEventListener('change', e => setCover(e.target.files[0]));
-      $('clearBook').addEventListener('click', () => { epubFile = null; bookInput.value = ''; $('bookPill').hidden = true; $('bookTitle').textContent = 'Drop your EPUB here'; $('bookHint').textContent = 'or browse files from your device'; $('bookDrop').classList.remove('has-file'); update(); });
-      ['dragover','dragenter'].forEach(ev => $('bookDrop').addEventListener(ev, e => { e.preventDefault(); $('bookDrop').classList.add('dragging'); })); $('bookDrop').addEventListener('dragleave', () => $('bookDrop').classList.remove('dragging')); $('bookDrop').addEventListener('drop', e => { e.preventDefault(); $('bookDrop').classList.remove('dragging'); setBook(e.dataTransfer.files[0]); });
-      $('downloadBtn').addEventListener('click', async () => { const status = $('status'); status.textContent = 'Updating your EPUB…'; $('downloadBtn').disabled = true; try { const zip = await JSZip.loadAsync(epubFile); const files = Object.keys(zip.files); const opfPath = files.find(x => /(^|\/)content\.opf$/i.test(x)) || files.find(x => /\.opf$/i.test(x)); let coverPath = 'cover.jpg'; if (opfPath) { const opf = await zip.file(opfPath).async('text'); const match = opf.match(/<item[^>]+properties=["'][^"']*cover-image[^"']*["'][^>]+href=["']([^"']+)/i) || opf.match(/<item[^>]+id=["'][^"']*cover[^"']*["'][^>]+href=["']([^"']+)/i); if (match) coverPath = decodeURIComponent(match[1]).replace(/\\/g, '/'); const base = opfPath.includes('/') ? opfPath.slice(0, opfPath.lastIndexOf('/') + 1) : ''; coverPath = base + coverPath; } zip.file(coverPath, coverFile); const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/epub+zip' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = epubFile.name.replace(/\.epub$/i, '') + '-new-cover.epub'; a.click(); status.textContent = 'Done — your refreshed EPUB is downloading.'; } catch (err) { status.textContent = 'Could not update this EPUB. Please try another file.'; } finally { $('downloadBtn').disabled = false; update(); } });
-    </script>
-  </body>
-</html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width"/><meta name="description" content="Change your EPUB book cover online for free with private local processing."/><title>EPUB Cover Changer — Coverly</title></head><body>
+<header class="site-header"><div class="shell nav"><a class="brand" href="#top">✦ coverly</a><nav><a href="#how">How it works</a><a href="#privacy">Privacy</a><a href="#faq">FAQ</a></nav><a class="nav-cta" href="#editor">Change a cover</a></div></header>
+<main id="top"><section class="hero shell"><div class="eyebrow">● FREE EPUB TOOL</div><h1>Give your books<br/><em>a better cover.</em></h1><p class="lede">Replace an ebook's cover in seconds. Preview the original and your new design, then download your updated EPUB. Your files stay on your device.</p><a class="button primary" href="#editor">Change a cover ↓</a><div class="trust-row"><span>✓ No account required</span><span>✓ Private, local processing</span><span>✓ Free to use</span></div></section>
+<section class="editor shell" id="editor"><div class="stepper"><div class="step active" id="step1"><b>01</b> Choose book</div><i></i><div class="step" id="step2"><b>02</b> Pick a cover</div><i></i><div class="step" id="step3"><b>03</b> Download</div></div><div class="editor-card"><div class="upload-panel" id="bookDrop"><div class="book-icon">▱</div><h2>Start with your ebook</h2><p>Choose an EPUB file to see its current cover and get started.</p><label class="button primary" for="epubInput">Choose EPUB</label><input id="epubInput" type="file" accept=".epub,application/epub+zip" hidden/><small>EPUB · processed locally in your browser</small><div class="file-pill" id="bookPill" hidden>▤ <strong id="bookName"></strong><button id="clearBook" aria-label="Remove book">×</button></div></div><div class="book-info" id="bookInfo" hidden><div><small>SELECTED BOOK</small><h3 id="bookTitle">—</h3><p id="bookMeta">—</p></div><span id="coverStatus">Reading cover…</span></div><div class="compare" id="compare" hidden><div><small>ORIGINAL COVER</small><div class="cover-stage" id="originalStage"><span>No cover found</span></div><p>Extracted from your book</p></div><strong class="swap">→</strong><div><small>NEW COVER</small><div class="cover-stage" id="newStage"><span>Choose an image below</span></div><p id="newDetails">Preview before applying</p></div></div><div class="replace" id="replace" hidden><div><h3>Choose your new cover</h3><p>Upload an image to replace the current book cover.</p></div><label class="button secondary" for="coverInput">Browse image</label><input id="coverInput" type="file" accept="image/jpeg,image/png,image/webp" hidden/><span id="coverName"></span><div id="fitControls" hidden><small>FIT</small><button class="fit active" data-fit="contain">Contain</button><button class="fit" data-fit="cover">Fill</button></div></div><button class="button download" id="downloadBtn" disabled>Choose a new cover ↓</button><p class="status" id="status" role="status" aria-live="polite"></p></div></section>
+<section class="safe shell" id="privacy"><div>⌑</div><article><h2>Your books stay yours.</h2><p>Coverly processes your files locally in your browser, without requiring an account. Your EPUB and images are never uploaded by this app.</p></article></section><section class="how shell" id="how"><small>HOW IT WORKS</small><h2>Your new cover in three simple steps</h2><div class="how-grid"><article><b>01</b><h3>Choose your book</h3><p>Upload the EPUB you want to update.</p></article><article><b>02</b><h3>Pick your cover</h3><p>Select an image and preview the change.</p></article><article><b>03</b><h3>Download your ebook</h3><p>Save the updated EPUB to your device.</p></article></div></section><section class="faq shell" id="faq"><small>FAQ</small><h2>Good to know</h2>{['How do I change an EPUB cover?','Does Coverly upload my ebook to a server?','Which image formats can I use?','Will my chapters and text remain unchanged?','Why might an EPUB fail to process?'].map(q=><details><summary>{q}<span>+</span></summary><p>Choose an EPUB, select a new image, preview it, and apply the new cover. Processing happens locally in your browser.</p></details>)}</section><section class="final-cta shell"><h2>Ready for a better-looking book?</h2><p>Give your ebook a cover that feels right.</p><a class="button primary" href="#editor">Change a cover</a></section></main><footer><div class="shell"><a class="brand" href="#top">✦ coverly</a><p>A simple, private way to update your EPUB book covers.</p><small>© 2026 Coverly</small></div></footer>
+<script>
+import JSZip from 'jszip';const $=id=>document.getElementById(id);let epubFile,coverFile,coverPath,fit='contain';function step(n){[1,2,3].forEach(i=>$('step'+i).classList.toggle('active',i<=n))}async function readBook(f){try{const z=await JSZip.loadAsync(f),opfPath=Object.keys(z.files).find(x=>/\.opf$/i.test(x)),opf=opfPath?await z.file(opfPath).async('text'):'';const m=opf.match(/<item[^>]+properties=["'][^"']*cover-image[^"']*["'][^>]+href=["']([^"']+)/i)||opf.match(/<item[^>]+id=["'][^"']*cover[^"']*["'][^>]+href=["']([^"']+)/i);if(m){coverPath=(opfPath.includes('/')?opfPath.slice(0,opfPath.lastIndexOf('/')+1):'')+decodeURIComponent(m[1]);const b=await z.file(coverPath)?.async('blob');if(b)$('originalStage').innerHTML=`<img src="${URL.createObjectURL(b)}" alt="Original EPUB cover"/>`}$('coverStatus').textContent=coverPath?'Original cover found':'No cover detected'}catch(e){$('status').textContent='This EPUB could not be read.'}}function book(f){if(!f?.name.toLowerCase().endsWith('.epub')){$('status').textContent='Please choose a valid EPUB file.';return}epubFile=f;$('bookPill').hidden=false;$('bookName').textContent=f.name;$('bookInfo').hidden=false;$('replace').hidden=false;$('compare').hidden=false;$('bookTitle').textContent=f.name;$('bookMeta').textContent=`${(f.size/1048576).toFixed(2)} MB · EPUB`;step(1);readBook(f)}function cover(f){if(!f||!/^image\/(jpeg|png|webp)$/.test(f.type)){return}$('coverName').textContent=f.name;coverFile=f;$('newStage').innerHTML=`<img src="${URL.createObjectURL(f)}" alt="New cover preview" style="object-fit:${fit}"/>`;$('newDetails').textContent=`${f.name} · ${(f.size/1048576).toFixed(2)} MB`;$('fitControls').hidden=false;$('downloadBtn').disabled=false;$('downloadBtn').textContent='Apply new cover ↓';step(2)}$('epubInput').addEventListener('change',e=>book(e.target.files[0]));$('coverInput').addEventListener('change',e=>cover(e.target.files[0]));$('clearBook').onclick=()=>location.reload();document.querySelectorAll('.fit').forEach(b=>b.onclick=()=>{fit=b.dataset.fit;document.querySelectorAll('.fit').forEach(x=>x.classList.toggle('active',x===b));$('newStage').querySelector('img').style.objectFit=fit});$('downloadBtn').onclick=async()=>{if(!epubFile||!coverFile)return;$('status').textContent='Updating cover…';try{const z=await JSZip.loadAsync(epubFile);z.file(coverPath||'cover.jpg',coverFile);const b=await z.generateAsync({type:'blob',mimeType:'application/epub+zip'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=epubFile.name.replace(/\.epub$/i,'')+'-new-cover.epub';a.click();$('status').textContent='Done — your updated EPUB is downloading.';step(3)}catch(e){$('status').textContent='Could not update this EPUB.'}};
+</script></body></html>
