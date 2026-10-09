@@ -1,0 +1,64 @@
+---
+import '../styles/global.css';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content="Replace your EPUB cover privately, right in your browser." />
+    <title>Coverly — EPUB cover changer</title>
+  </head>
+  <body>
+    <header class="nav shell">
+      <a class="brand" href="/" aria-label="Coverly home"><span class="brand-mark">✦</span> coverly</a>
+      <div class="nav-note"><span class="lock">⌑</span> Private by design</div>
+    </header>
+
+    <main>
+      <section class="hero shell">
+        <div class="eyebrow"><span></span> EPUB utility</div>
+        <h1>Give your books<br /><em>a better cover.</em></h1>
+        <p class="lede">Replace the cover of any EPUB in seconds. No uploads, no accounts, no fuss — everything happens right here in your browser.</p>
+        <div class="trust-row"><span>✓ 100% private</span><span>✓ Works offline</span><span>✓ Free to use</span></div>
+      </section>
+
+      <section class="workspace shell" aria-label="EPUB cover editor">
+        <div class="stepper"><div class="step active"><b>01</b><span>Choose book</span></div><div class="line"></div><div class="step"><b>02</b><span>Pick a cover</span></div><div class="line"></div><div class="step"><b>03</b><span>Download</span></div></div>
+        <div class="editor-card">
+          <div class="drop-zone" id="bookDrop">
+            <div class="book-icon">▱</div>
+            <h2 id="bookTitle">Drop your EPUB here</h2>
+            <p id="bookHint">or browse files from your device</p>
+            <label class="button primary" for="epubInput">Choose EPUB</label>
+            <input id="epubInput" type="file" accept=".epub,application/epub+zip" hidden />
+            <div class="file-pill" id="bookPill" hidden><span>▤</span><strong id="bookName"></strong><button id="clearBook" aria-label="Remove EPUB">×</button></div>
+          </div>
+          <div class="divider"><span>then add a new cover</span></div>
+          <div class="cover-row">
+            <div class="preview" id="preview"><div class="preview-placeholder">Your cover<br />will appear here</div></div>
+            <div class="cover-action"><h3>Choose a cover image</h3><p>JPG or PNG · up to 10 MB</p><label class="button secondary" for="coverInput">Browse image</label><input id="coverInput" type="file" accept="image/jpeg,image/png" hidden /><span class="filename" id="coverName"></span></div>
+          </div>
+          <button class="button download" id="downloadBtn" disabled><span>↓</span> Replace cover &amp; download</button>
+          <p class="status" id="status" role="status"></p>
+        </div>
+      </section>
+      <section class="safe shell"><div class="safe-icon">⌑</div><div><h3>Your files stay yours.</h3><p>Coverly processes everything locally in your browser. Your book and image never leave your device.</p></div></section>
+    </main>
+    <footer class="shell"><span>© 2026 Coverly</span><span>Made for readers who care about the details.</span></footer>
+
+    <script>
+      import JSZip from 'jszip';
+      const $ = (id) => document.getElementById(id);
+      let epubFile, coverFile;
+      const bookInput = $('epubInput'), coverInput = $('coverInput');
+      function setBook(file) { if (!file) return; epubFile = file; $('bookTitle').textContent = 'Your EPUB is ready'; $('bookHint').textContent = 'Choose a new cover below'; $('bookName').textContent = file.name; $('bookPill').hidden = false; $('bookDrop').classList.add('has-file'); update(); }
+      function setCover(file) { if (!file) return; coverFile = file; $('coverName').textContent = file.name; const url = URL.createObjectURL(file); $('preview').style.backgroundImage = `url(${url})`; $('preview').classList.add('has-image'); $('preview').innerHTML = ''; update(); }
+      function update() { $('downloadBtn').disabled = !(epubFile && coverFile); }
+      bookInput.addEventListener('change', e => setBook(e.target.files[0])); coverInput.addEventListener('change', e => setCover(e.target.files[0]));
+      $('clearBook').addEventListener('click', () => { epubFile = null; bookInput.value = ''; $('bookPill').hidden = true; $('bookTitle').textContent = 'Drop your EPUB here'; $('bookHint').textContent = 'or browse files from your device'; $('bookDrop').classList.remove('has-file'); update(); });
+      ['dragover','dragenter'].forEach(ev => $('bookDrop').addEventListener(ev, e => { e.preventDefault(); $('bookDrop').classList.add('dragging'); })); $('bookDrop').addEventListener('dragleave', () => $('bookDrop').classList.remove('dragging')); $('bookDrop').addEventListener('drop', e => { e.preventDefault(); $('bookDrop').classList.remove('dragging'); setBook(e.dataTransfer.files[0]); });
+      $('downloadBtn').addEventListener('click', async () => { const status = $('status'); status.textContent = 'Updating your EPUB…'; $('downloadBtn').disabled = true; try { const zip = await JSZip.loadAsync(epubFile); const files = Object.keys(zip.files); const opfPath = files.find(x => /(^|\/)content\.opf$/i.test(x)) || files.find(x => /\.opf$/i.test(x)); let coverPath = 'cover.jpg'; if (opfPath) { const opf = await zip.file(opfPath).async('text'); const match = opf.match(/<item[^>]+properties=["'][^"']*cover-image[^"']*["'][^>]+href=["']([^"']+)/i) || opf.match(/<item[^>]+id=["'][^"']*cover[^"']*["'][^>]+href=["']([^"']+)/i); if (match) coverPath = decodeURIComponent(match[1]).replace(/\\/g, '/'); const base = opfPath.includes('/') ? opfPath.slice(0, opfPath.lastIndexOf('/') + 1) : ''; coverPath = base + coverPath; } zip.file(coverPath, coverFile); const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/epub+zip' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = epubFile.name.replace(/\.epub$/i, '') + '-new-cover.epub'; a.click(); status.textContent = 'Done — your refreshed EPUB is downloading.'; } catch (err) { status.textContent = 'Could not update this EPUB. Please try another file.'; } finally { $('downloadBtn').disabled = false; update(); } });
+    </script>
+  </body>
+</html>
