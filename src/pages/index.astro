@@ -36,4 +36,20 @@ downloadButton.addEventListener('click', async (event) => {
     const blob = await zip.generateAsync({type:'blob', mimeType:'application/epub+zip'}); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = epubFile.name.replace(/\.epub$/i, '') + '-new-cover.epub'; link.click(); status.textContent = 'Done — your updated EPUB is downloading.'; step(3);
   } catch (error) { console.error(error); status.textContent = 'Could not update this EPUB. The book structure may be unsupported.'; } finally { downloadButton.disabled = false; }
 }, true);
+</script><script>
+// Handle EPUBs whose cover is declared as an XHTML cover page or uses a different OPF attribute order.
+document.querySelector('.editor-card').addEventListener('click', async (event) => {
+  if (event.target !== downloadButton || !epubFile || !coverFile) return;
+  event.preventDefault(); event.stopImmediatePropagation(); downloadButton.disabled = true;
+  const status = document.getElementById('status');
+  try {
+    const zip = await JSZip.loadAsync(epubFile), containerText = await zip.file('META-INF/container.xml')?.async('text'), root = new DOMParser().parseFromString(containerText || '', 'application/xml'), rootPath = root.querySelector('rootfile')?.getAttribute('full-path'), opfPath = rootPath || Object.keys(zip.files).find(n => /\.opf$/i.test(n));
+    if (!opfPath) throw new Error('No package document');
+    const opfText = await zip.file(opfPath).async('text'), doc = new DOMParser().parseFromString(opfText, 'application/xml'), items = [...doc.querySelectorAll('manifest item')], coverItem = items.find(i => /cover-image/i.test(i.getAttribute('properties') || '')) || items.find(i => /cover/i.test(i.getAttribute('id') || '') || /cover/i.test(i.getAttribute('href') || ''));
+    const dir = opfPath.includes('/') ? opfPath.slice(0, opfPath.lastIndexOf('/') + 1) : '', ext = coverFile.type === 'image/png' ? 'png' : coverFile.type === 'image/webp' ? 'webp' : 'jpg'; let imagePath;
+    if (coverItem && !/xhtml|html/i.test(coverItem.getAttribute('media-type') || '')) { imagePath = dir + decodeURIComponent(coverItem.getAttribute('href') || '').replace(/\\/g, '/'); zip.file(imagePath, coverFile); }
+    else { imagePath = `${dir}cover.${ext}`; zip.file(imagePath, coverFile); let item = coverItem; if (!item) { item = doc.createElement('item'); item.setAttribute('id', 'cover-image'); item.setAttribute('href', `cover.${ext}`); item.setAttribute('media-type', coverFile.type || 'image/jpeg'); item.setAttribute('properties', 'cover-image'); doc.querySelector('manifest').appendChild(item); } else { item.setAttribute('properties', `${item.getAttribute('properties') || ''} cover-image`.trim()); } let meta = [...doc.querySelectorAll('metadata meta')].find(m => m.getAttribute('name') === 'cover'); if (!meta) { meta = doc.createElement('meta'); meta.setAttribute('name','cover'); doc.querySelector('metadata').appendChild(meta); } meta.setAttribute('content', item.getAttribute('id') || 'cover-image'); }
+    const serializer = new XMLSerializer(); zip.file(opfPath, serializer.serializeToString(doc)); const blob = await zip.generateAsync({type:'blob', mimeType:'application/epub+zip'}), link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = epubFile.name.replace(/\.epub$/i,'') + '-new-cover.epub'; link.click(); status.textContent = 'Done — your updated EPUB is downloading.'; step(3);
+  } catch (error) { console.error(error); status.textContent = 'This EPUB uses an unsupported cover structure.'; } finally { downloadButton.disabled = false; }
+}, true);
 </script></body></html>
